@@ -41,7 +41,7 @@ export const logPageVisit = (req, res) => {
     ).length;
 
     // 🔥 Emit to all clients
-    getIO().emit("pageview-update", count);
+    getIO().emit("visit_update", count);
   }
 
   res.status(200).json({ message: "Visit logged" });
