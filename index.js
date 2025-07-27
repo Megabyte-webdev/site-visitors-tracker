@@ -1,26 +1,42 @@
-import { config } from "dotenv";
 import express from "express";
-import trackerRouter from "./routes/tracker.route.js";
-import cors from "cors";
+import http from "http";
+import { Server } from "socket.io";
 import cookieParser from "cookie-parser";
-config();
-const port = process.env.PORT;
+import cors from "cors";
+import trackerRouter, { ioEmitVisit } from "./routes/tracker.route.js";
+
 const app = express();
-const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [];
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "https://your-frontend.com"],
+    credentials: true,
+  },
+});
+// ✅ Parse comma-separated origins from .env
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",").map((origin) =>
+  origin.trim()
+);
 
-app.use(express.json());
-
-// Enable CORS for your frontend origin
 app.use(
   cors({
-    origin: allowedOrigins, // allow frontend
-    credentials: true, // allow cookies (important if using JWT in cookies)
+    origin: allowedOrigins,
+    credentials: true,
   })
 );
 app.use(cookieParser());
+app.use(express.json());
+
+// Share `io` with controller via export
+export const ioInstance = io;
 
 app.use("/api", trackerRouter);
 
-app.listen(port, () => {
-  console.log(`Website Tracker running on port ${port}`);
+io.on("connection", (socket) => {
+  console.log("Client connected", socket.id);
+});
+
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log("Server running on port", PORT);
 });
