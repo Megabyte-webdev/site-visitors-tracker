@@ -1,37 +1,50 @@
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.PAGE_VIEW_SECRET || "pageview_secret";
-const visitLog = {};
+const SECRET = process.env.JWT_SECRET || "secret";
+const visitLog = new Map(); // key: token, value: Date
 
 export const logPageVisit = (req, res) => {
-  const token = req.cookies?.pageview_token;
-  const today = new Date().toISOString().split("T")[0];
+  const token = req.cookies.pageview_token;
 
   if (token) {
     try {
-      jwt.verify(token, SECRET); // valid token = already counted
-      return res
-        .status(200)
-        .json({ success: false, message: "Already counted" });
-    } catch {
-      // Expired or invalid token — allow visit
+      const decoded = jwt.verify(token, SECRET);
+      const existingDate = visitLog.get(token);
+      const today = new Date().toDateString();
+
+      if (!existingDate || new Date(existingDate).toDateString() !== today) {
+        visitLog.set(token, new Date());
+      }
+    } catch (err) {
+      // Invalid token — issue new
+      const newToken = jwt.sign({ createdAt: Date.now() }, SECRET);
+      visitLog.set(newToken, new Date());
+      res.cookie("pageview_token", newToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 24 * 60 * 60 * 1000,
+      });
     }
+  } else {
+    const newToken = jwt.sign({ createdAt: Date.now() }, SECRET);
+    visitLog.set(newToken, new Date());
+    res.cookie("pageview_token", newToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000,
+    });
   }
 
-  // Count today's visit
-  visitLog[today] = (visitLog[today] || 0) + 1;
-
-  // Set new token (1-day expiry)
-  const newToken = jwt.sign({ visited: true }, SECRET, { expiresIn: "1d" });
-  res.cookie("pageview_token", newToken, {
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
-  });
-
-  res.json({ success: true });
+  res.status(200).json({ message: "Visit logged" });
 };
 
 export const getTodayVisits = (req, res) => {
-  const today = new Date().toISOString().split("T")[0];
-  res.json({ count: visitLog[today] || 0 });
+  const today = new Date().toDateString();
+  const count = Array.from(visitLog.values()).filter(
+    (date) => new Date(date).toDateString() === today
+  ).length;
+
+  res.status(200).json({ count });
 };
