@@ -6,13 +6,14 @@ import cookieParser from "cookie-parser";
 config();
 const port = process.env.PORT;
 const app = express();
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [];
 
 app.use(express.json());
 
 // Enable CORS for your frontend origin
 app.use(
   cors({
-    origin: "http://localhost:5173", // allow frontend
+    origin: allowedOrigins, // allow frontend
     credentials: true, // allow cookies (important if using JWT in cookies)
   })
 );
