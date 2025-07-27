@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { ioInstance } from "../server.js"; // important
+import { ioInstance } from "../index.js"; // important
 const SECRET = process.env.JWT_SECRET || "secret";
 const visitLog = new Map();
 
