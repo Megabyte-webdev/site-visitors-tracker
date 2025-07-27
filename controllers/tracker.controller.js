@@ -1,6 +1,6 @@
 // tracker.controller.js
 import jwt from "jsonwebtoken";
-import { getIO } from "../services/socket";
+import { getIO } from "../services/socket.js";
 
 const SECRET = process.env.JWT_SECRET || "secret";
 const visitLog = new Map();
