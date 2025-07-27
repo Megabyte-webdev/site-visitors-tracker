@@ -1,12 +1,13 @@
+// tracker.controller.js
 import jwt from "jsonwebtoken";
-import { ioInstance } from "../index.js"; // important
+import { getIO } from "../services/socket";
+
 const SECRET = process.env.JWT_SECRET || "secret";
 const visitLog = new Map();
 
 export const logPageVisit = (req, res) => {
   const token = req.cookies.pageview_token;
   const today = new Date().toDateString();
-
   let shouldCount = false;
 
   if (token) {
@@ -35,11 +36,12 @@ export const logPageVisit = (req, res) => {
       maxAge: 24 * 60 * 60 * 1000,
     });
 
-    // Emit updated count to all clients
     const count = Array.from(visitLog.values()).filter(
       (date) => new Date(date).toDateString() === today
     ).length;
-    ioInstance.emit("pageview-update", count);
+
+    // 🔥 Emit to all clients
+    getIO().emit("pageview-update", count);
   }
 
   res.status(200).json({ message: "Visit logged" });

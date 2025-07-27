@@ -1,23 +1,21 @@
+// server.js
 import express from "express";
-import http from "http";
-import { Server } from "socket.io";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import trackerRouter, { ioEmitVisit } from "./routes/tracker.route.js";
+import dotenv from "dotenv";
+import trackerRouter from "./routes/tracker.route.js";
+import { initSocket } from "./services/socket.js";
+
+dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: ["http://localhost:5173", "https://your-frontend.com"],
-    credentials: true,
-  },
-});
-// ✅ Parse comma-separated origins from .env
-const allowedOrigins = process.env.CORS_ORIGINS?.split(",").map((origin) =>
-  origin.trim()
+
+// Load allowed CORS origins from env
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",").map((o) =>
+  o.trim()
 );
 
+// Middleware setup
 app.use(
   cors({
     origin: allowedOrigins,
@@ -27,16 +25,13 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 
-// Share `io` with controller via export
-export const ioInstance = io;
-
+// Routes
 app.use("/api", trackerRouter);
 
-io.on("connection", (socket) => {
-  console.log("Client connected", socket.id);
-});
-
+// Start HTTP + WebSocket server
 const PORT = process.env.PORT || 10000;
+const server = initSocket(app, allowedOrigins);
+
 server.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+  console.log(`Server running on port ${PORT}`);
 });
